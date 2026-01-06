@@ -461,8 +461,8 @@ void UrgNode2::scan_thread()
     is_measurement_started_ = true;
     error_count_ = 0;
 
-    rclcpp::Clock ros_clock(RCL_ROS_TIME);
-    rclcpp::Time prev_time = ros_clock.now();
+    rclcpp::Clock system_clock(RCL_SYSTEM_TIME);
+    rclcpp::Time prev_time = system_clock.now();
 
     while (!close_thread_) {
       // Inactive状態判定
@@ -515,7 +515,7 @@ void UrgNode2::scan_thread()
         break;
       } else {
         // エラーカウントのリセット
-        rclcpp::Time current_time = ros_clock.now();
+        rclcpp::Time current_time = system_clock.now();
         rclcpp::Duration period = current_time - prev_time;
         if (period.seconds() >= error_reset_period_) {
           prev_time = current_time;
@@ -543,8 +543,8 @@ bool UrgNode2::create_scan_message(sensor_msgs::msg::LaserScan & msg)
 
   int num_beams = 0;
   long time_stamp = 0;
-  rclcpp::Clock ros_clock(RCL_ROS_TIME);
-  rclcpp::Time ros_time_stamp = ros_clock.now();
+  rclcpp::Clock system_clock(RCL_SYSTEM_TIME);
+  rclcpp::Time system_time_stamp = system_clock.now();
 
   if (use_intensity_) {
     num_beams = urg_get_distance_intensity(&urg_, &distance_[0], &intensity_[0], &time_stamp);
@@ -556,13 +556,11 @@ bool UrgNode2::create_scan_message(sensor_msgs::msg::LaserScan & msg)
   }
 
   // タイムスタンプ設定
-  // if (synchronize_time_) {
-  //   system_time_stamp = get_synchronized_time(time_stamp, system_time_stamp);
-  // }
-  // msg.header.stamp = system_time_stamp + system_latency_ + user_latency_ +
-  //   get_angular_time_offset();
-
-  msg.header.stamp = ros_time_stamp;
+  if (synchronize_time_) {
+    system_time_stamp = get_synchronized_time(time_stamp, system_time_stamp);
+  }
+  msg.header.stamp = system_time_stamp + system_latency_ + user_latency_ +
+    get_angular_time_offset();
 
   // データ領域確保
   msg.ranges.resize(num_beams);
@@ -599,8 +597,8 @@ bool UrgNode2::create_scan_message(sensor_msgs::msg::MultiEchoLaserScan & msg)
 
   int num_beams = 0;
   long time_stamp = 0;
-  rclcpp::Clock ros_clock(RCL_ROS_TIME);
-  rclcpp::Time ros_time_stamp = ros_clock.now();
+  rclcpp::Clock system_clock(RCL_SYSTEM_TIME);
+  rclcpp::Time system_time_stamp = system_clock.now();
   if (use_intensity_) {
     num_beams = urg_get_multiecho_intensity(&urg_, &distance_[0], &intensity_[0], &time_stamp);
   } else {
@@ -611,13 +609,11 @@ bool UrgNode2::create_scan_message(sensor_msgs::msg::MultiEchoLaserScan & msg)
   }
 
   // タイムスタンプ設定
-  // if (synchronize_time_) {
-  //   system_time_stamp = get_synchronized_time(time_stamp, system_time_stamp);
-  // }
-  // msg.header.stamp = system_time_stamp + system_latency_ + user_latency_ +
-  //   get_angular_time_offset();
-
-  msg.header.stamp = ros_time_stamp;
+  if (synchronize_time_) {
+    system_time_stamp = get_synchronized_time(time_stamp, system_time_stamp);
+  }
+  msg.header.stamp = system_time_stamp + system_latency_ + user_latency_ +
+    get_angular_time_offset();
 
   // データ領域確保
   msg.ranges.reserve(num_beams);
